@@ -1,15 +1,59 @@
 import { useState } from 'react'
+import Login from './Auth/Login'
+import Register from "./Auth/Register"
+import ForgotPassword from "./Auth/ForgotPassword"
+import ResetPassword from "./Auth/ResetPassword"
 
-export default function RightColumn(){
+
+export default function RightColumn({onAuthSuccess}) {
 
     const [currentView, setCurrentView] = useState("login")
-    const [isAuthenticated, setIsAuthenticated] = useState(false)
-    const [loading, setLoading] = useState(true)
     const [resetMessage, setResetMessage] = useState("")
 
-    const renderAuthForm = () => {
-        
+
+
+    const handleBackToLogin = () => {
+      setCurrentView("login")
+      setResetMessage("")
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
     }
+
+    const handleResetSuccess = (message) => {
+      setResetMessage(message)
+      setCurrentView("login")
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+
+
+
+    const renderAuthForm = () => {
+      switch (currentView) {
+        case "login":
+          return (
+            <Login
+              onSuccess={onAuthSuccess}
+              onSwitchToRegister={() => setCurrentView("register")}
+              onForgotPassword={() => setCurrentView("forgot-password")}
+            />
+          )
+          case "register":
+            return <Register onSuccess={onAuthSuccess} onSwitchToLogin={() => setCurrentView("login")} />
+          case "forgot-password":
+            return <ForgotPassword onBackToLogin={handleBackToLogin} />
+          case "reset-password":
+            return <ResetPassword onSuccess={handleResetSuccess} onBackToLogin={handleBackToLogin} />
+          default:
+            return (
+              <Login
+                onSuccess={onAuthSuccess}
+                onSwitchToRegister={() => setCurrentView("register")}
+                onForgotPassword={() => setCurrentView("forgot-password")}
+              />
+            )
+        }
+      }
 
     return(
         <div className="lg:col-span-5">
