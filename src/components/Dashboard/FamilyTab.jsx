@@ -31,7 +31,7 @@ const FamilyTab = () => {
 
   const fetchFamilyData = async () => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL;
       // First check if user is in a family
       const familyResponse = await fetch(`${API_URL}/family/info`, {
         headers: {
@@ -58,7 +58,7 @@ const FamilyTab = () => {
         }
 
         // Then fetch family tasks
-        const API_URL = process.env.REACT_APP_API_URL;
+        const API_URL = import.meta.env.VITE_API_URL;
         const tasksResponse = await fetch(`${API_URL}/family/tasks`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -92,7 +92,7 @@ const FamilyTab = () => {
     setSuccess("")
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/family/create`, {
         method: "POST",
         headers: {
@@ -132,7 +132,7 @@ const FamilyTab = () => {
     setSuccess("")
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/family/join`, {
         method: "POST",
         headers: {
@@ -164,7 +164,7 @@ const FamilyTab = () => {
     setError("")
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL;
       const url = editingTask
         ? `${API_URL}/family/tasks/${editingTask.id}`
         : `${API_URL}/family/tasks`
@@ -217,7 +217,7 @@ const FamilyTab = () => {
   const handleDeleteTask = async (taskId) => {
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
-        const API_URL = process.env.REACT_APP_API_URL;
+        const API_URL = import.meta.env.VITE_API_URL;
         const response = await fetch(`${API_URL}/family/tasks/${taskId}`, {
           method: "DELETE",
           headers: {
@@ -238,7 +238,7 @@ const FamilyTab = () => {
     const newStatus = task.status === "completed" ? "pending" : "completed"
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/family/tasks/${task.id}`, {
         method: "PUT",
         headers: {

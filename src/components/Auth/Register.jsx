@@ -45,6 +45,8 @@ export default function Register({onSuccess, onSwitchToLogin}){
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        console.log("fooooooorm");
+        
         setLoading(true)
         setError("")
         if (!validateForm()) {
@@ -54,7 +56,11 @@ export default function Register({onSuccess, onSwitchToLogin}){
 
 
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
+            const API_URL = import.meta.env.VITE_API_URL;
+
+            console.log("API URL:", API_URL); // Should log your full backend URL
+
+            
             const response = await axios.post(`${API_URL}/auth/register`, {
                 username: formData.username,
                 email: formData.email,
@@ -62,13 +68,14 @@ export default function Register({onSuccess, onSwitchToLogin}){
             });
 
             const data = response.data;
-
+            console.log(data);
+            
             login(data.user, data.token)
             onSuccess()
            
         } catch (err) {
             if (err.response) {
-            setError(err.response.data.error || "Registration failed");
+                setError(err.response.data.error || "Registration failed");
             } else {
                 setError("Network error. Please check if the server is running.");
             }

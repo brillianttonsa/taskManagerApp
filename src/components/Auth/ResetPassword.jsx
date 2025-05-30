@@ -27,7 +27,7 @@ export default function ResetPassword({onSuccess, onBackToLogin}) {
         }
 
         try {
-            const API_URL = process.env.REACT_APP_API_URL
+            const API_URL = import.meta.env.VITE_API_URL;
             const response = await axios.get(`${API_URL}/auth/verify-reset-token`, {
                 params: { token }
             });
@@ -77,7 +77,7 @@ export default function ResetPassword({onSuccess, onBackToLogin}) {
         }
 
         try{
-            const API_URL = process.env.REACT_APP_API_URL
+            const API_URL = import.meta.env.VITE_API_URL;
             const response = await axios.post(`${API_URL}/auth/reset-password`,{
             token,
             newPassword: formData.newPassword,

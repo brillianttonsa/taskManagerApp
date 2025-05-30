@@ -3,10 +3,12 @@ import Header from "./layout/Header"
 import Main from "./layout/Main"
 import Footer from "./layout/Footer"
 import { useState,useEffect } from "react"
+import Dashboard from './components/Dashboard/Dashboard'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [currentView, setCurrentView] = useState("login")
 
   useEffect(() => {
     // Check if this is a password reset URL
@@ -86,7 +88,8 @@ function App() {
     <AuthProvider>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         <Header/>
-        <Main/>
+        <Main onAuthSuccess={handleAuthSuccess} /> 
+
         <Footer/>
       </div>
     </AuthProvider>

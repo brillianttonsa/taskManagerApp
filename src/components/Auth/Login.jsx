@@ -27,10 +27,10 @@ export default function Login({ onSuccess, onSwitchToRegister, onForgotPassword 
         setError("")
 
         try {
-            const API_URL = process.env.REACT_APP_API_URL;
-            const response = await axios.post(`${API_URL}/auth/login`, {
-                formData
-            });
+            const API_URL = import.meta.env.VITE_API_URL;
+
+           const response = await axios.post(`${API_URL}/auth/login`, formData);
+
 
             const data = response.data;
             login(data.user, data.token)

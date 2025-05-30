@@ -19,7 +19,7 @@ const TasksTab = () => {
 
   const fetchTasks = async () => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/tasks`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -51,7 +51,7 @@ const TasksTab = () => {
     e.preventDefault()
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL;
       const url = editingTask ? `${API_URL}/tasks/${editingTask.id}` : `${API_URL}/tasks`
 
       const method = editingTask ? "PUT" : "POST"
@@ -95,7 +95,7 @@ const TasksTab = () => {
   const handleDelete = async (taskId) => {
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
-        const API_URL = process.env.REACT_APP_API_URL;
+        const API_URL = import.meta.env.VITE_API_URL;
         const response = await fetch(`${API_URL}/tasks/${taskId}`, {
           method: "DELETE",
           headers: {
@@ -116,7 +116,7 @@ const TasksTab = () => {
     const newStatus = task.status === "completed" ? "pending" : "completed"
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL;
       const response = await fetch(`${API_URL}/tasks/${task.id}`, {
         method: "PUT",
         headers: {
