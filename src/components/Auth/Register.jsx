@@ -45,7 +45,6 @@ export default function Register({onSuccess, onSwitchToLogin}){
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        console.log("fooooooorm");
         
         setLoading(true)
         setError("")
@@ -58,7 +57,7 @@ export default function Register({onSuccess, onSwitchToLogin}){
         try {
             const API_URL = import.meta.env.VITE_API_URL;
 
-            console.log("API URL:", API_URL); // Should log your full backend URL
+            // console.log("API URL:", API_URL); // Should log your full backend URL
 
             
             const response = await axios.post(`${API_URL}/auth/register`, {
@@ -68,7 +67,7 @@ export default function Register({onSuccess, onSwitchToLogin}){
             });
 
             const data = response.data;
-            console.log(data);
+            // console.log(data);
             
             login(data.user, data.token)
             onSuccess()
@@ -104,7 +103,7 @@ export default function Register({onSuccess, onSwitchToLogin}){
                 onChange={handleChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                placeholder="Choose a username"
+                placeholder="Enter username"
                 />
             </div>
 
