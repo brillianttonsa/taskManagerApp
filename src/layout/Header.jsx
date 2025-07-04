@@ -7,12 +7,10 @@ export default function Header(){
                 <div className="flex-shrink-0">
                   <h1 className="text-3xl font-bold text-blue-600">TaskFlow</h1>
                 </div>
-                <div className="ml-4">
-                  <p className="text-gray-600">Manage your tasks efficiently</p>
-                </div>
+               
               </div>
               <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-500">Welcome to your productivity companion</div>
+                <div className="text-sm text-gray-500">Manage task with ease</div>
               </div>
             </div>
           </div>
