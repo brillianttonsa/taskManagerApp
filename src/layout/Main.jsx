@@ -1,5 +1,5 @@
-import LeftColumn from "../components/LeftColumn";
-import RightColumn from "../components/RightColumn";
+import LeftColumn from "../components/columns/LeftColumn";
+import RightColumn from "../components/columns/RightColumn";
 
 // Main.jsx
 export default function Main({onAuthSuccess}){
