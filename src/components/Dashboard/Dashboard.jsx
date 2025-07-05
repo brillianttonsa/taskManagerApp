@@ -70,7 +70,7 @@ const Dashboard = ({ onLogout }) => {
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => setSidebarOpen(false)} />
+        <div className="lg:hidden fixed inset-0 z-40 backdrop-blur bg-opacity-50" onClick={() => setSidebarOpen(false)} />
       )}
     </div>
   )

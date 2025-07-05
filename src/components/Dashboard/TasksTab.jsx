@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
 
 const TasksTab = () => {
@@ -20,26 +21,23 @@ const TasksTab = () => {
   const fetchTasks = async () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/tasks`, {
+      const response = await axios.get(`${API_URL}/tasks`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
-      const data = await response.json()
-      if (response.ok) {
-        // Only show personal tasks (not assigned to others)
-        const personalTasks = data.filter((task) => !task.assigned_to || task.assigned_to === user.id)
-        // Sort tasks: first by status (pending first), then by priority (high to low)
-        personalTasks.sort((a, b) => {
-          // First sort by status - pending tasks first
-          if (a.status !== b.status) {
-            return a.status === "pending" ? -1 : 1
-          }
-          // Then sort by priority - high priority first (3 > 2 > 1)
-          return b.priority - a.priority
-        })
-        setTasks(personalTasks)
-      }
+      const data = response.data
+
+      const personalTasks = data.filter(
+        (task) => !task.assigned_to || task.assigned_to === user.id
+      )
+
+      personalTasks.sort((a, b) => {
+        if (a.status !== b.status) return a.status === "pending" ? -1 : 1
+        return b.priority - a.priority
+      })
+
+      setTasks(personalTasks)
     } catch (error) {
       console.error("Error fetching tasks:", error)
     } finally {
@@ -49,34 +47,23 @@ const TasksTab = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const API_URL = import.meta.env.VITE_API_URL;
+    const url = editingTask
+      ? `${API_URL}/tasks/${editingTask.id}`
+      : `${API_URL}/tasks`
+    const method = editingTask ? "put" : "post"
+    const taskData = { ...formData, assigned_to: user.id }
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const url = editingTask ? `${API_URL}/tasks/${editingTask.id}` : `${API_URL}/tasks`
-
-      const method = editingTask ? "PUT" : "POST"
-
-      // For personal tasks, always assign to self
-      const taskData = {
-        ...formData,
-        assigned_to: user.id,
-      }
-
-      const response = await fetch(url, {
-        method,
+      await axios[method](url, taskData, {
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(taskData),
       })
-
-      if (response.ok) {
-        fetchTasks()
-        setShowForm(false)
-        setEditingTask(null)
-        setFormData({ title: "", description: "", priority: 1 })
-      }
+      fetchTasks()
+      setShowForm(false)
+      setEditingTask(null)
+      setFormData({ title: "", description: "", priority: 1 })
     } catch (error) {
       console.error("Error saving task:", error)
     }
@@ -96,16 +83,10 @@ const TasksTab = () => {
     if (window.confirm("Are you sure you want to delete this task?")) {
       try {
         const API_URL = import.meta.env.VITE_API_URL;
-        const response = await fetch(`${API_URL}/tasks/${taskId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        await axios.delete(`${API_URL}/tasks/${taskId}`, {
+          headers: { Authorization: `Bearer ${token}` },
         })
-
-        if (response.ok) {
-          fetchTasks()
-        }
+        fetchTasks()
       } catch (error) {
         console.error("Error deleting task:", error)
       }
@@ -114,27 +95,22 @@ const TasksTab = () => {
 
   const toggleTaskStatus = async (task) => {
     const newStatus = task.status === "completed" ? "pending" : "completed"
-
     try {
       const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/tasks/${task.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await axios.put(
+        `${API_URL}/tasks/${task.id}`,
+        {
           title: task.title,
           description: task.description,
           priority: task.priority,
           status: newStatus,
           assigned_to: task.assigned_to,
-        }),
-      })
-
-      if (response.ok) {
-        fetchTasks()
-      }
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
+      fetchTasks()
     } catch (error) {
       console.error("Error updating task status:", error)
     }
@@ -173,6 +149,13 @@ const TasksTab = () => {
       </div>
     )
   }
+
+  const totalTasks = tasks.length
+  const completedTasks = tasks.filter((t) => t.status === "completed").length
+  const pendingTasks = totalTasks - completedTasks
+  const high = tasks.filter((t) => t.priority === 3).length
+  const med = tasks.filter((t) => t.priority === 2).length
+  const low = tasks.filter((t) => t.priority === 1).length
 
   return (
     <div className="space-y-6">
@@ -222,7 +205,7 @@ const TasksTab = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                 <select
                   value={formData.priority}
-                  onChange={(e) => setFormData({ ...formData, priority: Number.parseInt(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value={1}>Low</option>
@@ -251,44 +234,32 @@ const TasksTab = () => {
         </div>
       )}
 
-      {/* Tasks Table */}
+      {/* Task Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priority
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Task</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {tasks.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
-                    No tasks for this week. Create your first task!
-                  </td>
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No tasks for this week. Create your first task!</td>
                 </tr>
               ) : (
                 tasks.map((task) => (
                   <tr key={task.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{task.title}</div>
-                        {task.description && <div className="text-sm text-gray-500">{task.description}</div>}
-                      </div>
+                      <div className="text-sm font-medium text-gray-900">{task.title}</div>
+                      {task.description && <div className="text-sm text-gray-500">{task.description}</div>}
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(task.priority)}`}
-                      >
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(task.priority)}`}>
                         {getPriorityText(task.priority)}
                       </span>
                     </td>
@@ -303,12 +274,8 @@ const TasksTab = () => {
                       </button>
                     </td>
                     <td className="px-6 py-4 text-sm font-medium space-x-2">
-                      <button onClick={() => handleEdit(task)} className="text-blue-600 hover:text-blue-900">
-                        Edit
-                      </button>
-                      <button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-900">
-                        Delete
-                      </button>
+                      <button onClick={() => handleEdit(task)} className="text-blue-600 hover:text-blue-900">Edit</button>
+                      <button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-900">Delete</button>
                     </td>
                   </tr>
                 ))
@@ -318,140 +285,66 @@ const TasksTab = () => {
         </div>
       </div>
 
-      {/* Task Progress Chart */}
+      {/* Progress & Stats */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Progress</h3>
-        <div className="space-y-6">
-          {/* Completion Rate */}
-          <div>
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>Completion Rate</span>
-              <span>
-                {tasks.length > 0
-                  ? Math.round((tasks.filter((task) => task.status === "completed").length / tasks.length) * 100)
-                  : 0}
-                %
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-4">
-              <div
-                className="bg-blue-500 h-4 rounded-full transition-all duration-300"
-                style={{
-                  width: `${
-                    tasks.length > 0
-                      ? Math.round((tasks.filter((task) => task.status === "completed").length / tasks.length) * 100)
-                      : 0
-                  }%`,
-                }}
-              ></div>
-            </div>
-          </div>
 
-          {/* Priority Distribution */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Priority Distribution</h4>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>High</span>
-                  <span>{tasks.filter((task) => task.priority === 3).length}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-red-500 h-2 rounded-full"
-                    style={{
-                      width: `${
-                        tasks.length > 0
-                          ? Math.round((tasks.filter((task) => task.priority === 3).length / tasks.length) * 100)
-                          : 0
-                      }%`,
-                    }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>Medium</span>
-                  <span>{tasks.filter((task) => task.priority === 2).length}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-yellow-500 h-2 rounded-full"
-                    style={{
-                      width: `${
-                        tasks.length > 0
-                          ? Math.round((tasks.filter((task) => task.priority === 2).length / tasks.length) * 100)
-                          : 0
-                      }%`,
-                    }}
-                  ></div>
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>Low</span>
-                  <span>{tasks.filter((task) => task.priority === 1).length}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-500 h-2 rounded-full"
-                    style={{
-                      width: `${
-                        tasks.length > 0
-                          ? Math.round((tasks.filter((task) => task.priority === 1).length / tasks.length) * 100)
-                          : 0
-                      }%`,
-                    }}
-                  ></div>
-                </div>
-              </div>
-            </div>
+        {/* Completion */}
+        <div className="mb-6">
+          <div className="flex justify-between text-sm text-gray-600 mb-2">
+            <span>Completion Rate</span>
+            <span>{totalTasks ? Math.round((completedTasks / totalTasks) * 100) : 0}%</span>
           </div>
+          <div className="w-full bg-gray-200 rounded-full h-4">
+            <div
+              className="bg-blue-500 h-4 rounded-full transition-all duration-300"
+              style={{
+                width: `${totalTasks ? (completedTasks / totalTasks) * 100 : 0}%`,
+              }}
+            ></div>
+          </div>
+        </div>
 
-          {/* Status Distribution */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Status Distribution</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>Completed</span>
-                  <span>{tasks.filter((task) => task.status === "completed").length}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-green-500 h-2 rounded-full"
-                    style={{
-                      width: `${
-                        tasks.length > 0
-                          ? Math.round(
-                              (tasks.filter((task) => task.status === "completed").length / tasks.length) * 100,
-                            )
-                          : 0
-                      }%`,
-                    }}
-                  ></div>
-                </div>
+        {/* Priority & Status */}
+        <div className="grid grid-cols-3 gap-6">
+          {[
+            { label: "High", count: high, color: "bg-red-500" },
+            { label: "Medium", count: med, color: "bg-yellow-500" },
+            { label: "Low", count: low, color: "bg-green-500" },
+          ].map(({ label, count, color }) => (
+            <div key={label}>
+              <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <span>{label}</span>
+                <span>{count}</span>
               </div>
-              <div>
-                <div className="flex justify-between text-xs text-gray-600 mb-1">
-                  <span>Pending</span>
-                  <span>{tasks.filter((task) => task.status === "pending").length}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-yellow-500 h-2 rounded-full"
-                    style={{
-                      width: `${
-                        tasks.length > 0
-                          ? Math.round((tasks.filter((task) => task.status === "pending").length / tasks.length) * 100)
-                          : 0
-                      }%`,
-                    }}
-                  ></div>
-                </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`${color} h-2 rounded-full`}
+                  style={{ width: `${totalTasks ? (count / totalTasks) * 100 : 0}%` }}
+                ></div>
               </div>
             </div>
-          </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-2 gap-6 mt-6">
+          {[
+            { label: "Completed", count: completedTasks, color: "bg-green-500" },
+            { label: "Pending", count: pendingTasks, color: "bg-yellow-500" },
+          ].map(({ label, count, color }) => (
+            <div key={label}>
+              <div className="flex justify-between text-xs text-gray-600 mb-1">
+                <span>{label}</span>
+                <span>{count}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`${color} h-2 rounded-full`}
+                  style={{ width: `${totalTasks ? (count / totalTasks) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

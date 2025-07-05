@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "../../contexts/AuthContext"
+import axios from "axios"
 
 const FamilyTab = () => {
   const [familyMembers, setFamilyMembers] = useState([])
@@ -29,58 +30,33 @@ const FamilyTab = () => {
     fetchFamilyData()
   }, [])
 
+  const API_URL = import.meta.env.VITE_API_URL;
+  const api = axios.create({
+    baseURL: {API_URL},
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
   const fetchFamilyData = async () => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      // First check if user is in a family
-      const familyResponse = await fetch(`${API_URL}/family/info`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const familyRes = await api.get("/family/info")
+      const familyData = familyRes.data
+      setFamilyInfo(familyData)
+      setFamilyId(familyData.id)
+      setIsLeader(familyData.created_by === user.id)
+
+      const membersRes = await api.get("/family/members")
+      setFamilyMembers(membersRes.data)
+
+      const tasksRes = await api.get("/family/tasks")
+      const sortedTasks = tasksRes.data.sort((a, b) => {
+        if (a.status !== b.status) return a.status === "pending" ? -1 : 1
+        return b.priority - a.priority
       })
-
-      if (familyResponse.ok) {
-        const familyData = await familyResponse.json()
-        setFamilyInfo(familyData)
-        setFamilyId(familyData.id)
-        setIsLeader(familyData.created_by === user.id)
-
-        // Then fetch family members
-        const membersResponse = await fetch(`${API_URL}/family/members`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (membersResponse.ok) {
-          const membersData = await membersResponse.json()
-          setFamilyMembers(membersData)
-        }
-
-        // Then fetch family tasks
-        const API_URL = import.meta.env.VITE_API_URL;
-        const tasksResponse = await fetch(`${API_URL}/family/tasks`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (tasksResponse.ok) {
-          const tasksData = await tasksResponse.json()
-          // Sort tasks: first by status (pending first), then by priority (high to low)
-          tasksData.sort((a, b) => {
-            // First sort by status - pending tasks first
-            if (a.status !== b.status) {
-              return a.status === "pending" ? -1 : 1
-            }
-            // Then sort by priority - high priority first (3 > 2 > 1)
-            return b.priority - a.priority
-          })
-          setFamilyTasks(tasksData)
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching family data:", error)
+      setFamilyTasks(sortedTasks)
+    } catch (err) {
+      console.error("Error fetching family data:", err)
     } finally {
       setLoading(false)
     }
@@ -90,39 +66,23 @@ const FamilyTab = () => {
     e.preventDefault()
     setError("")
     setSuccess("")
-
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/family/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name: familyName }),
+      const res = await api.post("/family/create", { name: familyName })
+      const data = res.data
+      setSuccess(`Family created successfully! Share this invitation code: ${data.invitation_code}`)
+      setShowCreateForm(false)
+      setFamilyName("")
+      setFamilyId(data.family_id)
+      setIsLeader(true)
+      setFamilyInfo({
+        id: data.family_id,
+        name: data.name,
+        invitation_code: data.invitation_code,
+        created_by: user.id,
       })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess(`Family created successfully! Share this invitation code: ${data.invitation_code}`)
-        setShowCreateForm(false)
-        setFamilyName("")
-        setFamilyId(data.family_id)
-        setIsLeader(true)
-        // Set family info to show the invitation code
-        setFamilyInfo({
-          id: data.family_id,
-          name: data.name,
-          invitation_code: data.invitation_code,
-          created_by: user.id,
-        })
-        fetchFamilyData()
-      } else {
-        setError(data.error || "Failed to create family")
-      }
-    } catch (error) {
-      setError("Network error. Please try again.")
+      fetchFamilyData()
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to create family")
     }
   }
 
@@ -130,76 +90,41 @@ const FamilyTab = () => {
     e.preventDefault()
     setError("")
     setSuccess("")
-
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/family/join`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ invitationCode }),
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess(`Successfully joined family: ${data.name}`)
-        setShowJoinForm(false)
-        setInvitationCode("")
-        setFamilyId(data.family_id)
-        setIsLeader(false)
-        fetchFamilyData()
-      } else {
-        setError(data.error || "Failed to join family")
-      }
-    } catch (error) {
-      setError("Network error. Please try again.")
+      const res = await api.post("/family/join", { invitationCode })
+      const data = res.data
+      setSuccess(`Successfully joined family: ${data.name}`)
+      setShowJoinForm(false)
+      setInvitationCode("")
+      setFamilyId(data.family_id)
+      setIsLeader(false)
+      fetchFamilyData()
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to join family")
     }
   }
 
   const handleCreateTask = async (e) => {
     e.preventDefault()
     setError("")
-
+    const method = editingTask ? api.put : api.post
+    const url = editingTask ? `/family/tasks/${editingTask.id}` : "/family/tasks"
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const url = editingTask
-        ? `${API_URL}/family/tasks/${editingTask.id}`
-        : `${API_URL}/family/tasks`
-
-      const method = editingTask ? "PUT" : "POST"
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          ...taskFormData,
-          family_id: familyId,
-        }),
+      await method(url, {
+        ...taskFormData,
+        family_id: familyId,
       })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setShowTaskForm(false)
-        setTaskFormData({
-          title: "",
-          description: "",
-          priority: 1,
-          assigned_to: "",
-        })
-        setEditingTask(null)
-        fetchFamilyData()
-      } else {
-        setError(data.error || "Failed to create task")
-      }
-    } catch (error) {
-      setError("Network error. Please try again.")
+      setShowTaskForm(false)
+      setTaskFormData({
+        title: "",
+        description: "",
+        priority: 1,
+        assigned_to: "",
+      })
+      setEditingTask(null)
+      fetchFamilyData()
+    } catch (err) {
+      setError(err?.response?.data?.error || "Failed to create task")
     }
   }
 
@@ -215,79 +140,47 @@ const FamilyTab = () => {
   }
 
   const handleDeleteTask = async (taskId) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
-      try {
-        const API_URL = import.meta.env.VITE_API_URL;
-        const response = await fetch(`${API_URL}/family/tasks/${taskId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-
-        if (response.ok) {
-          fetchFamilyData()
-        }
-      } catch (error) {
-        console.error("Error deleting task:", error)
-      }
+    if (!window.confirm("Are you sure you want to delete this task?")) return
+    try {
+      await api.delete(`/family/tasks/${taskId}`)
+      fetchFamilyData()
+    } catch (err) {
+      console.error("Error deleting task:", err)
     }
   }
 
   const toggleTaskStatus = async (task) => {
     const newStatus = task.status === "completed" ? "pending" : "completed"
-
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/family/tasks/${task.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          status: newStatus,
-          assigned_to: task.assigned_to,
-        }),
+      await api.put(`/family/tasks/${task.id}`, {
+        ...task,
+        status: newStatus,
       })
-
-      if (response.ok) {
-        fetchFamilyData()
-      }
-    } catch (error) {
-      console.error("Error updating task status:", error)
+      fetchFamilyData()
+    } catch (err) {
+      console.error("Error updating task status:", err)
     }
   }
 
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 3:
-        return "bg-red-100 text-red-800"
-      case 2:
-        return "bg-yellow-100 text-yellow-800"
-      case 1:
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+      case 3: return "bg-red-100 text-red-800"
+      case 2: return "bg-yellow-100 text-yellow-800"
+      case 1: return "bg-green-100 text-green-800"
+      default: return "bg-gray-100 text-gray-800"
     }
   }
 
   const getPriorityText = (priority) => {
     switch (priority) {
-      case 3:
-        return "High"
-      case 2:
-        return "Medium"
-      case 1:
-        return "Low"
-      default:
-        return "Low"
+      case 3: return "High"
+      case 2: return "Medium"
+      case 1: return "Low"
+      default: return "Low"
     }
   }
 
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">

@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react"
+import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
 
 const WeeklyReports = () => {
@@ -24,15 +25,12 @@ const WeeklyReports = () => {
   const fetchTasks = async () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/tasks`, {
+      const response = await axios.get(`${API_URL}/tasks`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
-      const data = await response.json()
-      if (response.ok) {
-        setTasks(data)
-      }
+      setTasks(response.data)
     } catch (error) {
       console.error("Error fetching tasks:", error)
     } finally {
@@ -44,7 +42,6 @@ const WeeklyReports = () => {
     const completedTasks = tasks.filter((task) => task.status === "completed")
     const pendingTasks = tasks.filter((task) => task.status === "pending")
 
-    // Create a simple HTML content for PDF generation
     const reportContent = `
       <html>
         <head>
@@ -95,7 +92,7 @@ const WeeklyReports = () => {
                 ${task.description ? `<br><small>${task.description}</small>` : ""}
                 <br><small>Priority: ${task.priority === 3 ? "High" : task.priority === 2 ? "Medium" : "Low"}</small>
               </div>
-            `,
+            `
               )
               .join("")}
           </div>
@@ -110,7 +107,7 @@ const WeeklyReports = () => {
                 ${task.description ? `<br><small>${task.description}</small>` : ""}
                 <br><small>Priority: ${task.priority === 3 ? "High" : task.priority === 2 ? "Medium" : "Low"}</small>
               </div>
-            `,
+            `
               )
               .join("")}
           </div>
@@ -118,7 +115,6 @@ const WeeklyReports = () => {
       </html>
     `
 
-    // Open in new window for printing/saving as PDF
     const printWindow = window.open("", "_blank")
     printWindow.document.write(reportContent)
     printWindow.document.close()

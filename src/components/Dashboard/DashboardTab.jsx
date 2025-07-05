@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react"
+import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
 
 const DashboardTab = () => {
@@ -16,27 +17,22 @@ const DashboardTab = () => {
     try {
       const API_URL = import.meta.env.VITE_API_URL;
       // Fetch all tasks first to calculate real distributions
-      const tasksResponse = await fetch(`${API_URL}/tasks`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      
+      const tasksResponse = await axios.get(`${API_URL}/tasks`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
 
-      if (tasksResponse.ok) {
-        const tasksData = await tasksResponse.json()
-        setTasks(tasksData)
+      if (tasksResponse.status === 200) {
+        setTasks(tasksResponse.data)
       }
 
       // Then fetch dashboard stats
-      const statsResponse = await fetch(`${API_URL}/dashboard/stats`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const statsResponse = await axios.get(`${API_URL}/dashboard/stats`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
 
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json()
-        setStats(statsData)
+      if (statsResponse.status === 200) {
+        setStats(statsResponse.data)
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
@@ -303,7 +299,10 @@ const DashboardTab = () => {
                   <div className="w-24 text-sm text-gray-600">
                     {index === 0
                       ? "This Week"
-                      : `Week ${new Date(week.week_start).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+                      : `Week ${new Date(week.week_start).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}`}
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between text-sm text-gray-600 mb-1">
@@ -423,30 +422,7 @@ const DashboardTab = () => {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            onClick={() => (window.location.href = "#tasks")}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-          >
-            <div className="text-center">
-              <span className="text-2xl mb-2 block">📝</span>
-              <span className="text-sm font-medium text-gray-700">Create New Task</span>
-            </div>
-          </button>
-          <button
-            onClick={() => (window.location.href = "#reports")}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-          >
-            <div className="text-center">
-              <span className="text-2xl mb-2 block">📊</span>
-              <span className="text-sm font-medium text-gray-700">View Reports</span>
-            </div>
-          </button>
-        </div>
-      </div>
+     
     </div>
   )
 }
