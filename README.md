@@ -56,3 +56,7 @@ A full-stack task management application built with React, Node.js, Express, and
 4. **Family Collaboration**: Create a family and invite members with invitation codes
 5. **Track Progress**: View your dashboard for completion statistics
 6. **Generate Reports**: Create weekly PDF reports of your progress
+
+
+## Documentation
+Detailed Software Requirements Specification can be found [here](docs/TaskManager_SRS.docx).
